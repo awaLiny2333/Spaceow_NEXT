@@ -5,7 +5,7 @@ import { copy } from '../utils/clipboardTools';
 import { addSizeUnits, selectDirectory } from '../utils/storageTools';
 import { common, OpenLinkOptions } from "@kit.AbilityKit";
 import { fileUri } from "@kit.CoreFileKit";
-import { MessageEvents, taskpool, worker } from '@kit.ArkTS';
+import { MessageEvents, worker } from '@kit.ArkTS';
 
 @Entry
 @Component
@@ -61,6 +61,7 @@ struct Index {
               this.isLoading = true;
               selectDirectory().then((path) => {
                 if (path == '') {
+                  this.isLoading = false;
                   return;
                 }
                 // this.baseFileObject.update();
@@ -166,19 +167,4 @@ struct Index {
     this.fileObjects = [this.baseFileObject];
     this.baseFolderSize = addSizeUnits(this.baseFileObject.size);
   }
-}
-
-@Concurrent
-function fileObjectUpdate_Concurrent(fileObject: FileObject) {
-  console.log('start scan: ');
-  console.log(fileObject.path);
-  fileObject.update();
-}
-
-async function fileObjectUpdate(fileObject: FileObject) {
-  let task: taskpool.Task = new taskpool.Task(fileObjectUpdate_Concurrent, fileObject);
-  // task.onReceiveData((s: number)=>{
-  //
-  // });
-  await taskpool.execute(task);
 }

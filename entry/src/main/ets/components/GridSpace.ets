@@ -204,9 +204,11 @@ export struct GridSpace {
       for (let index = 0; index < this.fileObject.childrens.length; index++) {
         const element = this.fileObject.childrens[index];
         // Calculate proper side length
-        let elementSideLength = Math.round(Math.sqrt((element.size / thisSize) * this.rows * this.cols));
+        let elementSideLength = Math.round(Math.sqrt(element.size / thisSize * this.rows * this.cols));
         if (elementSideLength < 1) {
           elementSideLength = 1;
+          // Ignore too small objects
+          // continue;
         }
         if (elementSideLength >= this.maxLength) {
           elementSideLength = this.maxLength;
@@ -236,18 +238,19 @@ export struct GridSpace {
       // Fill and Determine Position
       for (let index = 0; index < this.processedObjects.length; index++) {
         let placed = false;
+        // Continuously try to put
         while (!placed && (this.processedParams[index][0] as number) > 0) {
-          const side = (this.processedParams[index][0] as number);
+          const sideLen = (this.processedParams[index][0] as number);
           let r = 0;
           let c = 0;
           // Traverse rows
-          for (r = 0; r < this.rows - side + 1; r++) {
+          for (r = 0; r < this.rows - sideLen + 1; r++) {
             // Traverse cols
-            for (c = 0; c < this.cols - side + 1; c++) {
-              if (this.canPlaceAtGrid(r, c, side)) {
+            for (c = 0; c < this.cols - sideLen + 1; c++) {
+              if (this.canPlaceAtGrid(r, c, sideLen)) {
                 this.processedParams[index].push(r);
                 this.processedParams[index].push(c);
-                this.fillGrid(r, c, side);
+                this.fillGrid(r, c, sideLen);
                 placed = true;
                 break;
               }
@@ -259,10 +262,11 @@ export struct GridSpace {
           }
           // try to fit in by shrink size ?!
           if (!placed) {
-            this.processedParams[index][0] = side - 1;
+            this.processedParams[index][0] = sideLen - 1;
           }
         }
       }
+      // After put notify ForEach refresh
       this.refreshStamp = Date.now().toString();
     }
   }

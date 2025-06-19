@@ -5,11 +5,14 @@ export async function selectDirectory() {
   let DocumentSelectOptions = new picker.DocumentSelectOptions();
   DocumentSelectOptions.selectMode = picker.DocumentSelectMode.FOLDER;
   let documentPicker = new picker.DocumentViewPicker();
-  let uris = await documentPicker.select(DocumentSelectOptions);
-  let path = fileIo.openSync(uris[0]).path;
-  // let fileObject = new FileObject(path);
-  // fileObject.update();
-  return path;
+  try {
+    let uris = await documentPicker.select(DocumentSelectOptions);
+    let path = fileIo.openSync(uris[0]).path;
+    return path;
+  } catch (e) {
+    console.error(e);
+    return '';
+  }
 }
 
 

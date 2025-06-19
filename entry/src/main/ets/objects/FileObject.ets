@@ -34,13 +34,9 @@ export class FileObject {
 
   update(workerPort?: ThreadWorkerGlobalScope) {
     if (this.type != 0) {
-      try {
-        if (workerPort) {
-          // console.log('[FileObject] New file: ' + this.size.toString());
-          workerPort.postMessage(this.size);
-        }
-      } catch (e) {
-        console.error(e);
+      if (workerPort) {
+        // console.log('[FileObject] New file: ' + this.size.toString());
+        workerPort.postMessage(this.size);
       }
       return this.size;
     }
