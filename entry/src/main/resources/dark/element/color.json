@@ -1,0 +1,16 @@
+{
+  "color": [
+    {
+      "name": "start_window_background",
+      "value": "#FF11182F"
+    },
+    {
+      "name": "supplementary",
+      "value": "#FF29365A"
+    },
+    {
+      "name": "accent",
+      "value": "#FFCDD1D7"
+    }
+  ]
+}

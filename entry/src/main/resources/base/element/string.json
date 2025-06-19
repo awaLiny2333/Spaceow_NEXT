@@ -1,0 +1,16 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "Meow main module!"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "To scan disk!"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "Spaceow"
+    }
+  ]
+}

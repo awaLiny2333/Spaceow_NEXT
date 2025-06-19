@@ -1,0 +1,16 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "喵喵主模块！"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "扫描磁盘！"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "盘扫喵"
+    }
+  ]
+}
