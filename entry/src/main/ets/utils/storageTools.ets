@@ -7,9 +7,9 @@ export async function selectDirectory() {
   let documentPicker = new picker.DocumentViewPicker();
   let uris = await documentPicker.select(DocumentSelectOptions);
   let path = fileIo.openSync(uris[0]).path;
-  let fileObject = new FileObject(path);
-  fileObject.update();
-  return fileObject;
+  // let fileObject = new FileObject(path);
+  // fileObject.update();
+  return path;
 }
 
 

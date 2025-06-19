@@ -1,11 +1,11 @@
-import { CapsuleText } from '../components/CapsuleText';
 import { GridSpace } from '../components/GridSpace';
-import { animationDefault, clickEffectDefault } from '../hosts/defaults';
+import { animationDefault } from '../hosts/defaults';
 import { FileObject } from '../objects/FileObject';
 import { copy } from '../utils/clipboardTools';
 import { addSizeUnits, selectDirectory } from '../utils/storageTools';
 import { common, OpenLinkOptions } from "@kit.AbilityKit";
 import { fileUri } from "@kit.CoreFileKit";
+import { MessageEvents, taskpool, worker } from '@kit.ArkTS';
 
 @Entry
 @Component
@@ -18,16 +18,18 @@ struct Index {
   // meow
   @StorageLink('basePath') basePath: string = 'Meow';
   @StorageLink('thisPath') thisPath: string = 'Meow';
+  @StorageLink('baseFileObject') baseFileObject: FileObject | undefined = undefined;
   @StorageLink('thisFileObject') thisFileObject: FileObject | undefined = undefined;
   @StorageLink('paths') paths: string[] = [];
   @StorageLink('sizes') sizes: number[] = [];
   @StorageLink('fileObjects') fileObjects: FileObject[] = [];
-  @State baseFolderSize: string = '';
-  @StorageLink('thisFolderSize') thisFolderSize: string = '';
+  @StorageLink('baseFolderSize') baseFolderSize: string = 'Total';
+  @StorageLink('thisFolderSize') thisFolderSize: string = 'Folder';
+  @StorageLink('scanFolderSize') scanFolderSize: string = 'Scanned';
+  // Load
+  @State isLoading: boolean = false;
   // This
-  @StorageLink('baseFileObject') baseFileObject: FileObject | undefined = undefined;
   @State maxSideLength: number = 100;
-  @State thisSideLength: number = 100;
 
   onWindowAreaChange() {
     this.maxSideLength = Math.min(this.windowHeight - 70, this.windowWidth);
@@ -54,10 +56,31 @@ struct Index {
             .fontColor($r('app.color.accent'))
             .fontWeight(FontWeight.Bold)
             .backgroundColor($r('app.color.supplementary'))
+            .enabled(!this.isLoading)
             .onClick(() => {
-              selectDirectory().then((fileObject) => {
-                this.baseFileObject = fileObject;
-                this.show();
+              this.isLoading = true;
+              selectDirectory().then((path) => {
+                if (path == '') {
+                  return;
+                }
+                // this.baseFileObject.update();
+                let workerInstance = new worker.ThreadWorker("entry/ets/workers/Scanner.ets");
+                let scannedSize: number = 0;
+                workerInstance.postMessage(path);
+                workerInstance.onmessage = (e: MessageEvents): void => {
+                  if (typeof e.data == 'number') {
+                    // Returned a new file's size
+                    scannedSize += e.data;
+                    // console.log(scannedSize.toString());
+                    this.scanFolderSize = addSizeUnits(scannedSize);
+                  } else {
+                    // Returned the FileObject
+                    this.baseFileObject = e.data as FileObject;
+                    workerInstance.terminate();
+                    this.show();
+                    this.isLoading = false;
+                  }
+                }
               })
             })
           Button(this.thisPath)
@@ -97,11 +120,15 @@ struct Index {
               this.baseFileObject = this.thisFileObject;
               this.show();
             })
-          Button(this.thisFolderSize + ' / ' + this.baseFolderSize)
+          Button(this.thisFolderSize + ' / ' + this.baseFolderSize + '  󰄝 ')
             .fontColor($r('app.color.accent'))
             .fontWeight(FontWeight.Bold)
             .backgroundColor($r('app.color.supplementary'))
-            .visibility(this.baseFolderSize == '' ? Visibility.None : Visibility.Visible)
+            .animation(animationDefault())
+          Button(this.scanFolderSize + '  󰀩 ')
+            .fontColor($r('app.color.accent'))
+            .fontWeight(FontWeight.Bold)
+            .backgroundColor($r('app.color.supplementary'))
             .animation(animationDefault())
         }
       } // Title
@@ -139,4 +166,19 @@ struct Index {
     this.fileObjects = [this.baseFileObject];
     this.baseFolderSize = addSizeUnits(this.baseFileObject.size);
   }
+}
+
+@Concurrent
+function fileObjectUpdate_Concurrent(fileObject: FileObject) {
+  console.log('start scan: ');
+  console.log(fileObject.path);
+  fileObject.update();
+}
+
+async function fileObjectUpdate(fileObject: FileObject) {
+  let task: taskpool.Task = new taskpool.Task(fileObjectUpdate_Concurrent, fileObject);
+  // task.onReceiveData((s: number)=>{
+  //
+  // });
+  await taskpool.execute(task);
 }

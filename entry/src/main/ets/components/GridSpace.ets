@@ -1,5 +1,6 @@
 import { animationDefault } from "../hosts/defaults";
-import { FileObject, FileObjectType } from "../objects/FileObject";
+import { FileObject } from "../objects/FileObject";
+import { sortParallelArraysInPlace } from "../utils/arrayTools";
 import { addSizeUnits } from "../utils/storageTools";
 
 @Component
@@ -33,7 +34,8 @@ export struct GridSpace {
   @State offY: number = 100;
   @State opac: number = 0;
   // data
-  @State processed: Array<FileObject | number>[] = [];
+  @State processedObjects: FileObject[] = [];
+  @State processedParams: Array<number>[] = [];
   @State disboard: boolean[][] = [];
 
   onGridsChange() {
@@ -93,35 +95,48 @@ export struct GridSpace {
 
   build() {
     Column() {
-      if (this.isOpened && this.fileObject?.type == FileObjectType.Directory) {
+      if (this.isOpened && this.fileObject?.type == 0) {
         // Display folder contents
-        ForEach(this.processed, (item: Array<FileObject | number>) => {
+        ForEach(this.processedObjects, (item: FileObject, index: number) => {
           GridSpace({
-            fileObject: item[0] as FileObject,
-            sideWidth: this.unitLength * (item[1] as number) - this.space,
-            sideHeight: this.unitLength * (item[1] as number) - this.space,
+            fileObject: item,
+            sideWidth: this.unitLength * this.processedParams[index][0] - this.space,
+            sideHeight: this.unitLength * this.processedParams[index][0] - this.space,
             layer: this.layer + 1,
           })
             .position({
-              top: (item[2] as number) * this.unitLength,
-              left: (item[3] as number) * this.unitLength
+              top: this.processedParams[index][1] * this.unitLength,
+              left: this.processedParams[index][2] * this.unitLength
             })
-        }, (item: Array<FileObject | number>) => {
-          return (item[0] as FileObject).path + this.refreshStamp;
+        }, (item: FileObject) => {
+          return item.path + this.refreshStamp;
         })
       } else {
         // Display file info
         Column() {
-          Text(this.fileObject?.getName())
-            .fontColor($r('app.color.accent'))
-            .fontSize(this.sideWidth * 0.2)
-            .fontWeight(FontWeight.Bold)
-            .maxLines(3)
-          Text(addSizeUnits(this.fileObject?.size || 0))
-            .fontSize(this.sideWidth * 0.15)
-            .fontColor($r('app.color.accent'))
-            .fontWeight(FontWeight.Medium)
-            .opacity(0.75)
+          if ((this.fileObject?.getName().length || 1) < 16) {
+            Text(this.fileObject?.getName())
+              .fontColor($r('app.color.accent'))
+              .fontSize(this.sideWidth * 0.2)
+              .fontWeight(FontWeight.Bold)
+              .maxLines(3)
+            Text(addSizeUnits(this.fileObject?.size || 0))
+              .fontSize(this.sideWidth * 0.15)
+              .fontColor($r('app.color.accent'))
+              .fontWeight(FontWeight.Medium)
+              .opacity(0.75)
+          } else {
+            Text(this.fileObject?.getName())
+              .fontColor($r('app.color.accent'))
+              .fontSize(this.sideWidth * 0.12)
+              .fontWeight(FontWeight.Bold)
+              .maxLines(5)
+            Text(addSizeUnits(this.fileObject?.size || 0))
+              .fontSize(this.sideWidth * 0.1)
+              .fontColor($r('app.color.accent'))
+              .fontWeight(FontWeight.Medium)
+              .opacity(0.75)
+          }
         }
         .width('100%')
         .height('100%')
@@ -149,7 +164,7 @@ export struct GridSpace {
     // .clickEffect(clickEffectDefault())
     .onClick(() => {
       if (this.fileObject) {
-        if (this.fileObject.type != FileObjectType.Directory) {
+        if (this.fileObject.type != 0) {
           return;
         }
         // Close
@@ -182,7 +197,8 @@ export struct GridSpace {
 
   private process() {
     if (this.fileObject) {
-      this.processed = [];
+      this.processedObjects = [];
+      this.processedParams = [];
       let thisSize = this.fileObject.size;
 
       for (let index = 0; index < this.fileObject.childrens.length; index++) {
@@ -200,13 +216,15 @@ export struct GridSpace {
           }
         }
         // Push to processed list
-        this.processed.push([element, elementSideLength]);
+        this.processedObjects.push(element);
+        this.processedParams.push([elementSideLength]);
       }
 
       // Sort and cut
-      this.processed.sort((a, b) => (b[1] as number) - (a[1] as number));
-      if (this.processed.length > this.rows * this.cols) {
-        this.processed = this.processed.slice(0, this.rows * this.cols);
+      // this.processedObjects.sort((a, b) => (b[1] as number) - (a[1] as number));
+      sortParallelArraysInPlace(this.processedObjects, this.processedParams);
+      if (this.processedObjects.length > this.rows * this.cols) {
+        this.processedObjects = this.processedObjects.slice(0, this.rows * this.cols);
       }
 
       // Init disboard
@@ -216,10 +234,10 @@ export struct GridSpace {
       }
 
       // Fill and Determine Position
-      for (let index = 0; index < this.processed.length; index++) {
+      for (let index = 0; index < this.processedObjects.length; index++) {
         let placed = false;
-        while (!placed && (this.processed[index][1] as number) > 0) {
-          const side = (this.processed[index][1] as number);
+        while (!placed && (this.processedParams[index][0] as number) > 0) {
+          const side = (this.processedParams[index][0] as number);
           let r = 0;
           let c = 0;
           // Traverse rows
@@ -227,8 +245,8 @@ export struct GridSpace {
             // Traverse cols
             for (c = 0; c < this.cols - side + 1; c++) {
               if (this.canPlaceAtGrid(r, c, side)) {
-                this.processed[index].push(r);
-                this.processed[index].push(c);
+                this.processedParams[index].push(r);
+                this.processedParams[index].push(c);
                 this.fillGrid(r, c, side);
                 placed = true;
                 break;
@@ -241,7 +259,7 @@ export struct GridSpace {
           }
           // try to fit in by shrink size ?!
           if (!placed) {
-            this.processed[index][1] = side - 1;
+            this.processedParams[index][0] = side - 1;
           }
         }
       }
