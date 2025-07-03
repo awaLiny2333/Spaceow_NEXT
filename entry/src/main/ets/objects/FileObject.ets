@@ -1,5 +1,5 @@
-import { fileIo } from "@kit.CoreFileKit";
-import { collections, ThreadWorkerGlobalScope } from "@kit.ArkTS";
+import { fileIo } from '@kit.CoreFileKit';
+import { collections, ThreadWorkerGlobalScope } from '@kit.ArkTS';
 
 export enum FileObjectType {
   Directory = 0,
@@ -46,11 +46,15 @@ export class FileObject {
 
     let dir_list = fileIo.listFileSync(this.path);
     for (let index = 0; index < dir_list.length; index++) {
-      let fo = new FileObject(this.path + '/' + dir_list[index]);
-      this.size += fo.update(workerPort);
-      // console.log(this.path + ' - ' + this.size.toString());
-      // callback(this.size);
-      this.childrens.push(fo);
+      try {
+        let fo = new FileObject(this.path + '/' + dir_list[index]);
+        this.size += fo.update(workerPort);
+        // console.log(this.path + ' - ' + this.size.toString());
+        // callback(this.size);
+        this.childrens.push(fo);
+      } catch (e) {
+        console.error(e);
+      }
     }
 
     return this.size;
