@@ -1,11 +1,11 @@
 import { GridSpace } from '../components/GridSpace';
-import { animationDefault } from '../hosts/defaults';
 import { FileObject } from '../objects/FileObject';
 import { copy } from '../utils/clipboardTools';
 import { addSizeUnits, selectDirectory } from '../utils/storageTools';
-import { common, OpenLinkOptions } from "@kit.AbilityKit";
-import { fileUri } from "@kit.CoreFileKit";
+import { common, OpenLinkOptions } from '@kit.AbilityKit';
+import { fileUri } from '@kit.CoreFileKit';
 import { MessageEvents, worker } from '@kit.ArkTS';
+import LinysButton from '../components/LinysButton';
 
 @Entry
 @Component
@@ -39,12 +39,8 @@ struct Index {
     Column({ space: 10 }) {
       Scroll() {
         Row({ space: 10 }) {
-          Button('Back ↑')
-            .fontColor($r('app.color.accent'))
-            .fontWeight(FontWeight.Bold)
-            .backgroundColor($r('app.color.supplementary'))
+          LinysButton({ text: 'Back ↑' })
             .opacity(this.thisPath == this.basePath ? 0.5 : 1)
-            .animation(animationDefault())
             .onClick(() => {
               if (this.basePath != this.thisPath) {
                 this.closeFolder = '';
@@ -52,10 +48,7 @@ struct Index {
               }
             })
             .keyboardShortcut(FunctionKey.ESC, [])
-          Button('Select  󰂺 ')
-            .fontColor($r('app.color.accent'))
-            .fontWeight(FontWeight.Bold)
-            .backgroundColor($r('app.color.supplementary'))
+          LinysButton({ text: 'Select  󰂺 ' })
             .enabled(!this.isLoading)
             .onClick(() => {
               this.isLoading = true;
@@ -84,18 +77,11 @@ struct Index {
                 }
               })
             })
-          Button(this.thisPath)
-            .fontColor($r('app.color.accent'))
-            .fontWeight(FontWeight.Bold)
-            .backgroundColor($r('app.color.supplementary'))
-            .animation(animationDefault())
+          LinysButton({ text: this.thisPath })
             .onClick(() => {
               copy(this.thisPath);
             })
-          Button('Go to Directory  󰱰 ')
-            .fontColor($r('app.color.accent'))
-            .fontWeight(FontWeight.Bold)
-            .backgroundColor($r('app.color.supplementary'))
+          LinysButton({ text: 'Go to Directory  󰱰 ' })
             .onClick(() => {
               // Open folder
               let context: common.UIAbilityContext = this.getUIContext().getHostContext() as common.UIAbilityContext;
@@ -111,26 +97,14 @@ struct Index {
                 console.error(e);
               }
             })
-          Button('Open as New  󰃍 ')
-            .fontColor($r('app.color.accent'))
-            .fontWeight(FontWeight.Bold)
-            .backgroundColor($r('app.color.supplementary'))
+          LinysButton({ text: 'Open as New  󰃍 ' })
             .opacity(this.thisPath == this.basePath ? 0.5 : 1)
-            .animation(animationDefault())
             .onClick(() => {
               this.baseFileObject = this.thisFileObject;
               this.show();
             })
-          Button(this.thisFolderSize + ' / ' + this.baseFolderSize + '  󰄝 ')
-            .fontColor($r('app.color.accent'))
-            .fontWeight(FontWeight.Bold)
-            .backgroundColor($r('app.color.supplementary'))
-            .animation(animationDefault())
-          Button(this.scanFolderSize + '  󰀩 ')
-            .fontColor($r('app.color.accent'))
-            .fontWeight(FontWeight.Bold)
-            .backgroundColor($r('app.color.supplementary'))
-            .animation(animationDefault())
+          LinysButton({ text: this.thisFolderSize + ' / ' + this.baseFolderSize + '  󰄝 ' })
+          LinysButton({ text: this.scanFolderSize + '  󰀩 ' })
         }
       } // Title
       .align(Alignment.TopStart)

@@ -5,13 +5,13 @@
         "name": "default",
         "type": "HarmonyOS",
         "material": {
-          "certpath": "C:\\Users\\OseasyVM\\.ohos\\config\\default_Spaceow_ZQLqFDuQpt9ottvzJNustAlvJq0e9RGausP_eO-SVIY=.cer",
+          "certpath": "C:\\Users\\meowDUO\\.ohos\\config\\default_Spaceow_NEXT_2fRI7KlRHzxS27EsPDqqzj6kykCQGsxqx98p_muGSCk=.cer",
           "keyAlias": "debugKey",
-          "keyPassword": "0000001B8ADD4B85E6943D5A9C3E523CB5E49F508297629F0917CC222E6546FE47C5721056A32937C9CC3D",
-          "profile": "C:\\Users\\OseasyVM\\.ohos\\config\\default_Spaceow_ZQLqFDuQpt9ottvzJNustAlvJq0e9RGausP_eO-SVIY=.p7b",
+          "keyPassword": "0000001A76B7463FF975D404B709C27F9895EA8C2B9B6A07B992C311B2C9CC9A30CBDAFB75941A62EC70",
+          "profile": "C:\\Users\\meowDUO\\.ohos\\config\\default_Spaceow_NEXT_2fRI7KlRHzxS27EsPDqqzj6kykCQGsxqx98p_muGSCk=.p7b",
           "signAlg": "SHA256withECDSA",
-          "storeFile": "C:\\Users\\OseasyVM\\.ohos\\config\\default_Spaceow_ZQLqFDuQpt9ottvzJNustAlvJq0e9RGausP_eO-SVIY=.p12",
-          "storePassword": "0000001B9DF85AE8DB0379D862923E22752F35DD03E5AE5CA155DCC5CA0C83372508D1DB9819DCE44DAE95"
+          "storeFile": "C:\\Users\\meowDUO\\.ohos\\config\\default_Spaceow_NEXT_2fRI7KlRHzxS27EsPDqqzj6kykCQGsxqx98p_muGSCk=.p12",
+          "storePassword": "0000001A077FF4CD5CE6AD05444A606D9DB37CA1BC9B63687685B189618FD973D1CA6A1A1D54D0AD4F8B"
         }
       }
     ],

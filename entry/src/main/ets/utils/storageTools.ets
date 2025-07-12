@@ -1,5 +1,4 @@
 import { fileIo, picker } from "@kit.CoreFileKit";
-import { FileObject } from "../objects/FileObject";
 
 export async function selectDirectory() {
   let DocumentSelectOptions = new picker.DocumentSelectOptions();
@@ -22,16 +21,16 @@ export async function selectDirectory() {
  * @returns A string, the connected result of a number of size and its unit.
  * */
 export function addSizeUnits(size_in_bytes: number | bigint) {
-  let units = ['Bytes', 'KiB', 'MiB', 'GiB', 'TiB', 'PiB', 'EiB', 'ZiB', 'YiB']
+  let units = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB']
   let result = BigInt(size_in_bytes);
   let unit = 0;
-  while (result > 1024 * 1024 && unit < units.length - 2) {
-    result /= 1024n;
+  while (result > 1000 * 1000 && unit < units.length - 2) {
+    result /= 1000n;
     unit += 1;
   }
   // To keep decimal places
   let numberResult = Number(result);
-  numberResult /= 1024;
+  numberResult /= 1000;
   unit += 1;
   return numberResult.toFixed(2) + " " + units[unit];
 }

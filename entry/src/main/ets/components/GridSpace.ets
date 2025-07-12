@@ -1,7 +1,7 @@
-import { animationDefault } from "../hosts/defaults";
-import { FileObject } from "../objects/FileObject";
-import { sortParallelArraysInPlace } from "../utils/arrayTools";
-import { addSizeUnits } from "../utils/storageTools";
+import { animationDefault } from '../hosts/defaults';
+import { FileObject } from '../objects/FileObject';
+import { sortParallelArraysInPlace } from '../utils/arrayTools';
+import { addSizeUnits } from '../utils/storageTools';
 
 @Component
 export struct GridSpace {
@@ -10,9 +10,9 @@ export struct GridSpace {
   @StorageLink('closeFolder') @Watch('onFolderClose') closeFolder: string = '';
   @StorageLink('basePath') basePath: string = 'Meow';
   @StorageLink('thisPath') thisPath: string = 'Meow';
-  @StorageLink('thisFolderSize') thisFolderSize: string = '';
-  @StorageLink('thisFileObject') thisFileObject: FileObject | undefined = undefined;
   @StorageLink('baseFileObject') baseFileObject: FileObject | undefined = undefined;
+  @StorageLink('thisFileObject') thisFileObject: FileObject | undefined = undefined;
+  @StorageLink('thisFolderSize') thisFolderSize: string = '';
   @StorageLink('paths') paths: string[] = [];
   @StorageLink('sizes') sizes: number[] = [];
   @StorageLink('fileObjects') fileObjects: FileObject[] = [];
@@ -145,23 +145,15 @@ export struct GridSpace {
         .justifyContent(FlexAlign.End)
       }
     }
-    .padding({ left: this.space, top: this.space })
+    .padding(this.layer == 0 ? { left: this.space, top: this.space } : {})
     .clip(true)
     .backgroundColor(this.isOpened ? $r('app.color.start_window_background') : $r('app.color.supplementary'))
     .opacity(this.opac * (this.isOpened ? 1 : ((this.fileObject?.path.indexOf(this.thisPath) || 0) == 0 ? 1 : 0.5)))
-    // .borderWidth(this.isOpened ? 1 : 0)
-    // .borderColor($r('app.color.accent'))
-    .onMouse((me) => {
-      if (me.button == MouseButton.Right) {
-        // TODO: Options
-      }
-    })
     .height(this.sideHeight)
     .width(this.sideWidth)
     .offset({ y: this.offY })
     .animation(animationDefault())
-    .borderRadius(16)
-    // .clickEffect(clickEffectDefault())
+    .borderRadius(Math.max(0, 16 - this.layer * 1.25))
     .onClick(() => {
       if (this.fileObject) {
         if (this.fileObject.type != 0) {
@@ -185,13 +177,19 @@ export struct GridSpace {
         }
       }
     })
+    .onMouse((me) => {
+      if (me.button == MouseButton.Right && me.action == MouseAction.Press) {
+        // TODO: Options
+      }
+    })
   }
 
   private calculateUnitLength() {
-    this.unitLength = ((Math.min(this.sideWidth, this.sideHeight) - this.space) / this.grids);
+    let deduceSpace = (this.layer == 0 ? 1 : -1) * this.space;
+    this.unitLength = ((Math.min(this.sideWidth, this.sideHeight) - deduceSpace) / this.grids);
     // console.log(this.unitLength.toString());
-    this.rows = Math.floor((this.sideHeight - this.space) / this.unitLength);
-    this.cols = Math.floor((this.sideWidth - this.space) / this.unitLength);
+    this.rows = Math.floor((this.sideHeight - deduceSpace) / this.unitLength);
+    this.cols = Math.floor((this.sideWidth - deduceSpace) / this.unitLength);
     this.maxLength = Math.max(this.rows, this.cols);
   }
 
