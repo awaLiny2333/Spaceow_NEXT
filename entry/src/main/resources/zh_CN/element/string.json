@@ -11,6 +11,22 @@
     {
       "name": "EntryAbility_label",
       "value": "盘扫喵"
+    },
+    {
+      "name": "main_back",
+      "value": "上一级 ↑"
+    },
+    {
+      "name": "main_select",
+      "value": "选择  \uDB80\uDCBA"
+    },
+    {
+      "name": "main_go_to_directory",
+      "value": "前往文件夹  \uDB83\uDC70"
+    },
+    {
+      "name": "main_open_as_new",
+      "value": "在新窗口中打开  \uDB80\uDCCD"
     }
   ]
 }

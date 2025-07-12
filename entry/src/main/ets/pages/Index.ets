@@ -52,7 +52,7 @@ struct Index {
     Column({ space: 10 }) {
       Scroll() {
         Row({ space: 10 }) {
-          LinysButton({ text: 'Back ↑' })
+          LinysButton({ text: $r('app.string.main_back') })
             .opacity(this.thisPath == this.basePath ? 0.5 : 1)
             .onClick(() => {
               if (this.basePath != this.thisPath) {
@@ -61,7 +61,7 @@ struct Index {
               }
             })
             .keyboardShortcut(FunctionKey.ESC, [])
-          LinysButton({ text: 'Select  󰂺' })
+          LinysButton({ text: $r('app.string.main_select') })
             .enabled(!this.isLoading)
             .onClick(() => {
               this.isLoading = true;
@@ -90,7 +90,7 @@ struct Index {
                 }
               })
             })
-          LinysButton({ text: 'Go to Directory  󰱰' })
+          LinysButton({ text: $r('app.string.main_go_to_directory') })
             .onClick(() => {
               // Open folder
               let context: common.UIAbilityContext = this.getUIContext().getHostContext() as common.UIAbilityContext;
@@ -106,7 +106,7 @@ struct Index {
                 console.error(e);
               }
             })
-          LinysButton({ text: 'Open as New  󰃍' })
+          LinysButton({ text: $r('app.string.main_open_as_new') })
             .opacity(!this.thisFileObject ? 0.5 : 1)
             .onClick(() => {
               // Open as new
@@ -153,6 +153,7 @@ struct Index {
     this.folderSizes = [this.baseFileObject.size];
     this.fileObjects = [this.baseFileObject];
     this.baseFolderSize = addSizeUnits(this.baseFileObject.size);
+    this.thisFolderSize = this.baseFolderSize;
   }
 
   openAsNew(fileObj: FileObject | undefined) {
