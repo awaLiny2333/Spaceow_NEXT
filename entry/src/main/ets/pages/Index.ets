@@ -44,6 +44,15 @@ struct Index {
     this.display();
   }
 
+  onBackPress(): boolean | void {
+    if (this.basePath != this.thisPath) {
+      this.closeFolderRequest = '';
+      this.closeFolderRequest = this.thisPath;
+      return true;
+    }
+    return false;
+  }
+
   onWindowAreaChange() {
     this.maxSideLength = Math.min(this.windowHeight - 70, this.windowWidth);
   }
