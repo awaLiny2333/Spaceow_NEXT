@@ -12,10 +12,12 @@ export class FileObject {
   path: string;
   size: number;
   type: number;
+  id: string;
   childrens: collections.Array<FileObject> = new collections.Array<FileObject>();
 
   constructor(path: string, size?: number) {
     this.path = path;
+    this.id = path + '@' + Date.now().toString();
     this.size = size || 0;
 
     let stat = fileIo.statSync(path);

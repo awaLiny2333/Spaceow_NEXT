@@ -5,23 +5,27 @@ import { addSizeUnits } from '../utils/storageTools';
 
 @Component
 export struct GridSpace {
-  // environment
-  @StorageProp('grids') @Watch('onGridsChange') grids: number = 10;
-  @StorageLink('closeFolder') @Watch('onFolderClose') closeFolder: string = '';
-  @StorageLink('basePath') basePath: string = 'Meow';
-  @StorageLink('thisPath') thisPath: string = 'Meow';
-  @StorageLink('baseFileObject') baseFileObject: FileObject | undefined = undefined;
-  @StorageLink('thisFileObject') thisFileObject: FileObject | undefined = undefined;
-  @StorageLink('thisFolderSize') thisFolderSize: string = '';
-  @StorageLink('paths') paths: string[] = [];
-  @StorageLink('sizes') sizes: number[] = [];
-  @StorageLink('fileObjects') fileObjects: FileObject[] = [];
+  @LocalStorageLink('windowId') windowId: number = Date.now();
+  @LocalStorageLink('closeFolderRequest') @Watch('onRequestFolderClose') closeFolderRequest: string = '';
+  // environment (base)
+  @LocalStorageLink('basePath') basePath: string = 'Meow';
+  @LocalStorageLink('baseFileObject') baseFileObject: FileObject | undefined = undefined;
+  // environment (this)
+  @LocalStorageLink('thisPath') thisPath: string = 'Meow';
+  @LocalStorageLink('thisFolderSize') thisFolderSize: string = '';
+  @LocalStorageLink('thisFileObject') thisFileObject: FileObject | undefined = undefined;
+  // environment (history)
+  @LocalStorageLink('paths') paths: string[] = [];
+  @LocalStorageLink('folderSizes') folderSizes: number[] = [];
+  @LocalStorageLink('fileObjects') fileObjects: FileObject[] = [];
   // meow
   @Prop @Watch('onGridsChange') sideWidth: number = 60;
   @Prop @Watch('onGridsChange') sideHeight: number = 50;
   @Prop @Watch('onPathChange') fileObject: FileObject | undefined = undefined;
   @Prop isOpened: boolean = false;
   // UI
+  @State lastFileObjectID: string = '';
+  @StorageProp('grids') @Watch('onGridsChange') grids: number = 10;
   @Prop layer: number = 0;
   @State unitLength: number = 10;
   @State space: number = 4;
@@ -39,33 +43,44 @@ export struct GridSpace {
   @State disboard: boolean[][] = [];
 
   onGridsChange() {
-    // this.calculateUnitLength();
-    // this.process();
+    console.log('onGridsChange! window: ' + this.windowId.toString() + ' new: ' + this.grids.toString());
     this.refreshTimeout = 200;
   }
 
   onPathChange() {
-    // this.calculateUnitLength();
-    // this.process();
+    if (!this.fileObject) {
+      // console.log('onPathChange ignored due to undefined fileObject.');
+      return;
+    }
+    if (this.fileObject.id == this.lastFileObjectID) {
+      // console.log('onPathChange ignored due to no change in this.fileObject.id.');
+      return;
+    }
+    this.lastFileObjectID = this.fileObject.id;
+    console.log('onPathChange!  window: ' + this.windowId.toString() + ' new: ' + this.fileObject.path);
     this.refreshTimeout = 200;
   }
 
-  onFolderClose() {
-    if (this.fileObject) {
-      if (this.closeFolder == this.basePath) {
+  onRequestFolderClose() {
+    if (this.fileObject && this.closeFolderRequest) {
+      if (this.closeFolderRequest == this.basePath) {
+        // Impossible to close base file :O
         return;
       }
-      if (this.closeFolder != this.fileObject.path) {
+      if (this.closeFolderRequest != this.fileObject.path) {
+        // If not closing me
         return;
       }
+      // If is closing me (?!
       this.isOpened = false;
       this.paths.splice(this.paths.length - 1, 1);
       this.thisPath = this.paths[this.paths.length - 1];
-      this.sizes.splice(this.sizes.length - 1, 1);
-      this.thisFolderSize = addSizeUnits(this.sizes[this.sizes.length - 1]);
+      this.folderSizes.splice(this.folderSizes.length - 1, 1);
+      this.thisFolderSize = addSizeUnits(this.folderSizes[this.folderSizes.length - 1]);
       this.fileObjects.splice(this.fileObjects.length - 1, 1);
       this.thisFileObject = this.fileObjects[this.paths.length - 1];
     }
+    this.closeFolderRequest = '';
   }
 
   aboutToAppear(): void {
@@ -73,19 +88,20 @@ export struct GridSpace {
     this.process();
     if (this.fileObject) {
       this.isOpened = (this.thisPath.indexOf(this.fileObject.path)) == 0;
+      this.lastFileObjectID = this.fileObject.id;
     }
 
     // Respond to layout change
     setInterval(() => {
-      if (0 < this.refreshTimeout && this.refreshTimeout <= 100) {
+      if (0 < this.refreshTimeout && this.refreshTimeout <= 10) {
         this.calculateUnitLength();
         this.process();
       }
-      this.refreshTimeout -= 100;
+      this.refreshTimeout -= 10;
       if (this.refreshTimeout < 0) {
         this.refreshTimeout = 0;
       }
-    }, 100)
+    }, 10)
 
     setTimeout(() => {
       this.offY = 0;
@@ -161,8 +177,8 @@ export struct GridSpace {
         }
         // Close
         if (this.isOpened) {
-          this.closeFolder = '';
-          this.closeFolder = this.thisPath;
+          this.closeFolderRequest = '';
+          this.closeFolderRequest = this.thisPath;
           return;
         }
         // Open
@@ -172,7 +188,7 @@ export struct GridSpace {
           this.thisFileObject = this.fileObject;
           this.thisFolderSize = addSizeUnits(this.fileObject.size);
           this.paths.push(this.fileObject.path);
-          this.sizes.push(this.fileObject.size);
+          this.folderSizes.push(this.fileObject.size);
           this.fileObjects.push(this.fileObject);
         }
       }

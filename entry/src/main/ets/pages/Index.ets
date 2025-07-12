@@ -2,34 +2,47 @@ import { GridSpace } from '../components/GridSpace';
 import { FileObject } from '../objects/FileObject';
 import { copy } from '../utils/clipboardTools';
 import { addSizeUnits, selectDirectory } from '../utils/storageTools';
-import { common, OpenLinkOptions } from '@kit.AbilityKit';
+import { common, OpenLinkOptions, Want } from '@kit.AbilityKit';
 import { fileUri } from '@kit.CoreFileKit';
 import { MessageEvents, worker } from '@kit.ArkTS';
 import LinysButton from '../components/LinysButton';
+import { BusinessError } from '@kit.BasicServicesKit';
 
 @Entry
 @Component
 struct Index {
-  // environment
-  @StorageLink('windowHeight') @Watch('onWindowAreaChange') windowHeight: number = 100;
-  @StorageLink('windowWidth') @Watch('onWindowAreaChange') windowWidth: number = 100;
-  @StorageLink('grids') grids: number = 14;
-  @StorageLink('closeFolder') closeFolder: string = '';
-  // meow
-  @StorageLink('basePath') basePath: string = 'Meow';
-  @StorageLink('thisPath') thisPath: string = 'Meow';
-  @StorageLink('baseFileObject') baseFileObject: FileObject | undefined = undefined;
-  @StorageLink('thisFileObject') thisFileObject: FileObject | undefined = undefined;
-  @StorageLink('paths') paths: string[] = [];
-  @StorageLink('sizes') sizes: number[] = [];
-  @StorageLink('fileObjects') fileObjects: FileObject[] = [];
-  @StorageLink('baseFolderSize') baseFolderSize: string = 'Total';
-  @StorageLink('thisFolderSize') thisFolderSize: string = 'Folder';
-  @StorageLink('scanFolderSize') scanFolderSize: string = 'Scanned';
+  // GLOBAL
+  @StorageLink('newFileObject') newFileObject: FileObject | undefined = undefined;
+  // Operations
+  @LocalStorageLink('closeFolderRequest') closeFolderRequest: string = '';
+  @LocalStorageLink('scanFolderSize') scanFolderSize: string = 'Scanned';
+  // Environment (base)
+  @LocalStorageLink('basePath') basePath: string = 'Meow';
+  @LocalStorageLink('baseFolderSize') baseFolderSize: string = 'Total';
+  @LocalStorageLink('baseFileObject') baseFileObject: FileObject | undefined = undefined;
+  // Environment (this)
+  @LocalStorageLink('thisPath') thisPath: string = 'Meow';
+  @LocalStorageLink('thisFolderSize') thisFolderSize: string = 'Folder';
+  @LocalStorageLink('thisFileObject') thisFileObject: FileObject | undefined = undefined;
+  // Environment (history)
+  @LocalStorageLink('paths') paths: string[] = [];
+  @LocalStorageLink('folderSizes') folderSizes: number[] = [];
+  @LocalStorageLink('fileObjects') fileObjects: FileObject[] = [];
+  // UI
+  @LocalStorageLink('grids') grids: number = 14;
+  @LocalStorageLink('windowId') windowId: number = Date.now();
+  @LocalStorageLink('windowHeight') @Watch('onWindowAreaChange') windowHeight: number = 100;
+  @LocalStorageLink('windowWidth') @Watch('onWindowAreaChange') windowWidth: number = 100;
   // Load
   @State isLoading: boolean = false;
   // This
   @State maxSideLength: number = 100;
+
+  aboutToAppear(): void {
+    this.baseFileObject = this.newFileObject;
+    this.newFileObject = undefined;
+    this.display();
+  }
 
   onWindowAreaChange() {
     this.maxSideLength = Math.min(this.windowHeight - 70, this.windowWidth);
@@ -43,12 +56,12 @@ struct Index {
             .opacity(this.thisPath == this.basePath ? 0.5 : 1)
             .onClick(() => {
               if (this.basePath != this.thisPath) {
-                this.closeFolder = '';
-                this.closeFolder = this.thisPath;
+                this.closeFolderRequest = '';
+                this.closeFolderRequest = this.thisPath;
               }
             })
             .keyboardShortcut(FunctionKey.ESC, [])
-          LinysButton({ text: 'Select  󰂺 ' })
+          LinysButton({ text: 'Select  󰂺' })
             .enabled(!this.isLoading)
             .onClick(() => {
               this.isLoading = true;
@@ -71,17 +84,13 @@ struct Index {
                     // Returned the FileObject
                     this.baseFileObject = e.data as FileObject;
                     workerInstance.terminate();
-                    this.show();
+                    this.display();
                     this.isLoading = false;
                   }
                 }
               })
             })
-          LinysButton({ text: this.thisPath })
-            .onClick(() => {
-              copy(this.thisPath);
-            })
-          LinysButton({ text: 'Go to Directory  󰱰 ' })
+          LinysButton({ text: 'Go to Directory  󰱰' })
             .onClick(() => {
               // Open folder
               let context: common.UIAbilityContext = this.getUIContext().getHostContext() as common.UIAbilityContext;
@@ -92,19 +101,23 @@ struct Index {
                 }
               };
               try {
-                context.openLink(link, openLinkOptions)
+                context.openLink(link, openLinkOptions);
               } catch (e) {
                 console.error(e);
               }
             })
-          LinysButton({ text: 'Open as New  󰃍 ' })
-            .opacity(this.thisPath == this.basePath ? 0.5 : 1)
+          LinysButton({ text: 'Open as New  󰃍' })
+            .opacity(!this.thisFileObject ? 0.5 : 1)
             .onClick(() => {
-              this.baseFileObject = this.thisFileObject;
-              this.show();
+              // Open as new
+              this.openAsNew(this.thisFileObject);
             })
-          LinysButton({ text: this.thisFolderSize + ' / ' + this.baseFolderSize + '  󰄝 ' })
-          LinysButton({ text: this.scanFolderSize + '  󰀩 ' })
+          LinysButton({ text: this.thisFolderSize + ' / ' + this.baseFolderSize + '  󰄝' })
+          LinysButton({ text: this.thisPath })
+            .onClick(() => {
+              copy(this.thisPath);
+            })
+          LinysButton({ text: this.scanFolderSize + '  󰀩' })
         }
       } // Title
       .align(Alignment.TopStart)
@@ -129,7 +142,7 @@ struct Index {
     .width('100%')
   }
 
-  show() {
+  display() {
     if (!this.baseFileObject) {
       return;
     }
@@ -137,8 +150,28 @@ struct Index {
     this.thisPath = this.basePath;
     this.thisFileObject = this.baseFileObject;
     this.paths = [this.basePath];
-    this.sizes = [this.baseFileObject.size];
+    this.folderSizes = [this.baseFileObject.size];
     this.fileObjects = [this.baseFileObject];
     this.baseFolderSize = addSizeUnits(this.baseFileObject.size);
+  }
+
+  openAsNew(fileObj: FileObject | undefined) {
+    if (!fileObj) {
+      return;
+    }
+    // Open new window
+    this.newFileObject = fileObj;
+    let wantInfo: Want = {
+      deviceId: '', // This device
+      bundleName: 'com.next.liny.spaceow',
+      moduleName: 'entry',
+      abilityName: 'EntryAbility',
+    };
+    let context: common.UIAbilityContext = this.getUIContext().getHostContext() as common.UIAbilityContext;
+    context.startAbility(wantInfo).then(() => {
+      console.log('startAbility success.');
+    }).catch((error: BusinessError) => {
+      console.log('startAbility failed: ' + error);
+    });
   }
 }
