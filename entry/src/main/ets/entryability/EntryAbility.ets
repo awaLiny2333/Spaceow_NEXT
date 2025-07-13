@@ -1,7 +1,7 @@
 import { AbilityConstant, ConfigurationConstant, UIAbility, Want } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { display, window } from '@kit.ArkUI';
-import { BusinessError } from '@kit.BasicServicesKit';
+// import { BusinessError } from '@kit.BasicServicesKit';
 
 const DOMAIN = 0x0000;
 
@@ -26,19 +26,19 @@ export default class EntryAbility extends UIAbility {
       }
       hilog.info(DOMAIN, 'testTag', 'Succeeded in loading the content.');
 
-      let windowClass = windowStage.getMainWindowSync(); // Get app main window
+      // let windowClass = windowStage.getMainWindowSync(); // Get app main window
 
-      try {
-        let decorHeight = windowClass.getWindowDecorHeight() || 0;
-        let promise = windowClass.resize(this.vp2px(600), this.vp2px(650 + decorHeight));
-        promise.then(() => {
-          console.info('Succeeded in changing the window size.');
-        }).catch((err: BusinessError) => {
-          console.error(`Failed to change the window size. Cause code: ${err.code}, path: ${err.message}`);
-        });
-      } catch (exception) {
-        console.error(`Failed to change the window size. Cause code: ${exception.code}, path: ${exception.message}`);
-      }
+      // try {
+        // let decorHeight = windowClass.getWindowDecorHeight() || 0;
+        // let promise = windowClass.resize(this.vp2px(600), this.vp2px(650 + decorHeight));
+        // promise.then(() => {
+        //   console.info('Succeeded in changing the window size.');
+        // }).catch((err: BusinessError) => {
+        //   console.error(`Failed to change the window size. Cause code: ${err.code}, path: ${err.message}`);
+        // });
+      // } catch (exception) {
+      //   console.error(`Failed to change the window size. Cause code: ${exception.code}, path: ${exception.message}`);
+      // }
     });
   }
 

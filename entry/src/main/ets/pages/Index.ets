@@ -41,11 +41,12 @@ struct Index {
   aboutToAppear(): void {
     this.baseFileObject = this.newFileObject;
     this.newFileObject = undefined;
-    this.display();
+    this.rebaseAndDisplay();
   }
 
   onBackPress(): boolean | void {
     if (this.basePath != this.thisPath) {
+      // If can go back
       this.closeFolderRequest = '';
       this.closeFolderRequest = this.thisPath;
       return true;
@@ -70,7 +71,7 @@ struct Index {
               }
             })
             .keyboardShortcut(FunctionKey.ESC, [])
-          LinysButton({ text: $r('app.string.main_select') })
+          LinysButton({ text: $r('app.string.main_select') }) // Select
             .enabled(!this.isLoading)
             .onClick(() => {
               this.isLoading = true;
@@ -93,13 +94,14 @@ struct Index {
                     // Returned the FileObject
                     this.baseFileObject = e.data as FileObject;
                     workerInstance.terminate();
-                    this.display();
+                    console.log('[Scanner] Result received. Worker terminated. ')
+                    this.rebaseAndDisplay();
                     this.isLoading = false;
                   }
                 }
               })
             })
-          LinysButton({ text: $r('app.string.main_go_to_directory') })
+          LinysButton({ text: $r('app.string.main_go_to_directory') }) // Go to dir
             .onClick(() => {
               // Open folder
               let context: common.UIAbilityContext = this.getUIContext().getHostContext() as common.UIAbilityContext;
@@ -151,7 +153,7 @@ struct Index {
     .width('100%')
   }
 
-  display() {
+  rebaseAndDisplay() {
     if (!this.baseFileObject) {
       return;
     }

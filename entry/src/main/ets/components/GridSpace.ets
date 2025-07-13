@@ -1,6 +1,6 @@
 import { animationDefault } from '../hosts/defaults';
+import { DisboardLayoutObject } from '../objects/DisboardLayoutObject';
 import { FileObject } from '../objects/FileObject';
-import { sortParallelArraysInPlace } from '../utils/arrayTools';
 import { addSizeUnits } from '../utils/storageTools';
 
 @Component
@@ -38,9 +38,37 @@ export struct GridSpace {
   @State offY: number = 100;
   @State opac: number = 0;
   // data
-  @State processedObjects: FileObject[] = [];
-  @State processedParams: Array<number>[] = [];
+  @State layoutObjects: DisboardLayoutObject[] = [];
+  // @State processedObjects: FileObject[] = [];
+  // @State processedParams: Array<number>[] = [];
   @State disboard: boolean[][] = [];
+
+  aboutToAppear(): void {
+    this.calculateUnitLength();
+    this.process();
+    if (this.fileObject) {
+      this.isOpened = (this.thisPath.indexOf(this.fileObject.path)) == 0;
+      this.lastFileObjectID = this.fileObject.id;
+      // console.log('[GridSpace] Render square ' + this.fileObject.path);
+    }
+
+    // Respond to layout change
+    setInterval(() => {
+      if (0 < this.refreshTimeout && this.refreshTimeout <= 10) {
+        this.calculateUnitLength();
+        this.process();
+      }
+      this.refreshTimeout -= 10;
+      if (this.refreshTimeout < 0) {
+        this.refreshTimeout = 0;
+      }
+    }, 10)
+
+    setTimeout(() => {
+      this.offY = 0;
+      this.opac = 1;
+    }, Math.floor(Math.random() * 200))
+  }
 
   onGridsChange() {
     console.log('onGridsChange! window: ' + this.windowId.toString() + ' new: ' + this.grids.toString());
@@ -83,46 +111,20 @@ export struct GridSpace {
     this.closeFolderRequest = '';
   }
 
-  aboutToAppear(): void {
-    this.calculateUnitLength();
-    this.process();
-    if (this.fileObject) {
-      this.isOpened = (this.thisPath.indexOf(this.fileObject.path)) == 0;
-      this.lastFileObjectID = this.fileObject.id;
-    }
-
-    // Respond to layout change
-    setInterval(() => {
-      if (0 < this.refreshTimeout && this.refreshTimeout <= 10) {
-        this.calculateUnitLength();
-        this.process();
-      }
-      this.refreshTimeout -= 10;
-      if (this.refreshTimeout < 0) {
-        this.refreshTimeout = 0;
-      }
-    }, 10)
-
-    setTimeout(() => {
-      this.offY = 0;
-      this.opac = 1;
-    }, Math.floor(Math.random() * 200))
-  }
-
   build() {
     Column() {
       if (this.isOpened && this.fileObject?.type == 0) {
         // Display folder contents
-        ForEach(this.processedObjects, (item: FileObject, index: number) => {
+        ForEach(this.layoutObjects, (item: DisboardLayoutObject, index: number) => {
           GridSpace({
-            fileObject: item,
-            sideWidth: this.unitLength * this.processedParams[index][0] - this.space,
-            sideHeight: this.unitLength * this.processedParams[index][0] - this.space,
+            fileObject: item.fileObject,
+            sideWidth: this.unitLength * this.layoutObjects[index].sideLength - this.space,
+            sideHeight: this.unitLength * this.layoutObjects[index].sideLength - this.space,
             layer: this.layer + 1,
           })
             .position({
-              top: this.processedParams[index][1] * this.unitLength,
-              left: this.processedParams[index][2] * this.unitLength
+              top: this.layoutObjects[index].row * this.unitLength,
+              left: this.layoutObjects[index].col * this.unitLength
             })
         }, (item: FileObject) => {
           return item.path + this.refreshStamp;
@@ -200,89 +202,105 @@ export struct GridSpace {
     })
   }
 
+  /**
+   * Calculates and refreshes the unitLength
+   * */
   private calculateUnitLength() {
-    let deduceSpace = (this.layer == 0 ? 1 : -1) * this.space;
-    this.unitLength = ((Math.min(this.sideWidth, this.sideHeight) - deduceSpace) / this.grids);
-    // console.log(this.unitLength.toString());
-    this.rows = Math.floor((this.sideHeight - deduceSpace) / this.unitLength);
-    this.cols = Math.floor((this.sideWidth - deduceSpace) / this.unitLength);
-    this.maxLength = Math.max(this.rows, this.cols);
+    // leave more space if is the base layer
+    let spaceOffset = (this.layer == 0 ? -1 : 1) * this.space;
+    // Calculates default unitLength
+    this.unitLength = ((Math.min(this.sideWidth, this.sideHeight) + spaceOffset) / this.grids);
+    // Update rows and cols of layout
+    this.rows = Math.floor((this.sideHeight + spaceOffset) / this.unitLength);
+    this.cols = Math.floor((this.sideWidth + spaceOffset) / this.unitLength);
+    // Update maxLength of squares
+    this.maxLength = Math.min(this.rows, this.cols);
   }
 
   private process() {
-    if (this.fileObject) {
-      this.processedObjects = [];
-      this.processedParams = [];
-      let thisSize = this.fileObject.size;
+    if (!this.fileObject) {
+      return;
+    }
 
-      for (let index = 0; index < this.fileObject.childrens.length; index++) {
-        const element = this.fileObject.childrens[index];
-        // Calculate proper side length
-        let elementSideLength = Math.round(Math.sqrt(element.size / thisSize * this.rows * this.cols));
-        if (elementSideLength < 1) {
-          elementSideLength = 1;
-          // Ignore too small objects
-          // continue;
+    // Init layoutObjects
+    let lo: DisboardLayoutObject[] = [];
+    // Init disboard
+    this.disboard = [];
+    for (let i = 0; i < this.rows; i++) {
+      this.disboard.push(new Array(this.cols).fill(false));
+    }
+
+    // Traverse all children and fill processedArrays
+    for (let index = 0; index < this.fileObject.childrens.length; index++) {
+      const fo = this.fileObject.childrens[index];
+      // Calculate proper side length
+      let squareSideLength = Math.round(Math.sqrt(fo.size / this.fileObject.size * this.rows * this.cols));
+      // Too small process
+      squareSideLength = Math.min(1, squareSideLength);
+      // Too big process
+      if (squareSideLength >= this.maxLength) {
+        squareSideLength = this.maxLength;
+        if (this.rows == this.cols && this.fileObject.childrens.length > 1) {
+          // Leave some space for other blocks
+          squareSideLength -= 1;
         }
-        if (elementSideLength >= this.maxLength) {
-          elementSideLength = this.maxLength;
-          if (this.rows == this.cols && this.fileObject.childrens.length > 1) {
-            // Leave some space for other blocks
-            elementSideLength -= 1;
-          }
-        }
-        // Push to processed list
-        this.processedObjects.push(element);
-        this.processedParams.push([elementSideLength]);
       }
+      // Push to processed list
+      lo.push(new DisboardLayoutObject(fo, squareSideLength));
+    }
 
-      // Sort and cut
-      // this.processedObjects.sort((a, b) => (b[1] as number) - (a[1] as number));
-      sortParallelArraysInPlace(this.processedObjects, this.processedParams);
-      if (this.processedObjects.length > this.rows * this.cols) {
-        this.processedObjects = this.processedObjects.slice(0, this.rows * this.cols);
-      }
+    // Sort
+    lo.sort((a, b) => b.sideLength - a.sideLength);
 
-      // Init disboard
-      this.disboard = [];
-      for (let i = 0; i < this.rows; i++) {
-        this.disboard.push(new Array(this.cols).fill(false));
-      }
-
-      // Fill and Determine Position
-      for (let index = 0; index < this.processedObjects.length; index++) {
-        let placed = false;
-        // Continuously try to put
-        while (!placed && (this.processedParams[index][0] as number) > 0) {
-          const sideLen = (this.processedParams[index][0] as number);
-          let r = 0;
-          let c = 0;
-          // Traverse rows
-          for (r = 0; r < this.rows - sideLen + 1; r++) {
-            // Traverse cols
-            for (c = 0; c < this.cols - sideLen + 1; c++) {
-              if (this.canPlaceAtGrid(r, c, sideLen)) {
-                this.processedParams[index].push(r);
-                this.processedParams[index].push(c);
-                this.fillGrid(r, c, sideLen);
-                placed = true;
-                break;
-              }
-            }
-            // Check if placed on this row
-            if (placed) {
+    // Fill and Determine Position
+    let index = 0;
+    for (index = 0; index < lo.length; index++) {
+      let fo = lo[index];
+      let placed = false;
+      // Continuously try to put
+      while (!placed && fo.sideLength > 0) {
+        let foSideLen = fo.sideLength;
+        let r = 0;
+        let c = 0;
+        // Traverse rows
+        for (r = 0; r < this.rows - foSideLen + 1; r++) {
+          // Traverse cols
+          for (c = 0; c < this.cols - foSideLen + 1; c++) {
+            if (this.canPlaceAtGrid(r, c, foSideLen)) {
+              lo[index].row = r;
+              lo[index].col = c;
+              this.fillGrid(r, c, foSideLen);
+              placed = true;
               break;
             }
           }
-          // try to fit in by shrink size ?!
-          if (!placed) {
-            this.processedParams[index][0] = sideLen - 1;
+          // Check if placed on this row
+          if (placed) {
+            break;
           }
         }
+        // try to fit in by shrink size ?!
+        if (!placed) {
+          fo.sideLength = foSideLen - 1;
+        }
       }
-      // After put notify ForEach refresh
-      this.refreshStamp = Date.now().toString();
+      // Stop putting if full
+      if (!this.canPlaceAtGrid(this.rows - 1, this.cols - 1, 1)) {
+        // Disboard full
+        console.log('meow')
+        break;
+      }
     }
+
+    // Cut over length
+    if (index != lo.length) {
+      console.log('cut')
+      this.layoutObjects = lo.slice(0, index + 1);
+    } else {
+      this.layoutObjects = lo;
+    }
+    // After put notify ForEach refresh
+    this.refreshStamp = Date.now().toString();
   }
 
   private canPlaceAtGrid(ro: number, co: number, sl: number) {
