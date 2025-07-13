@@ -126,8 +126,8 @@ export struct GridSpace {
               top: this.layoutObjects[index].row * this.unitLength,
               left: this.layoutObjects[index].col * this.unitLength
             })
-        }, (item: FileObject) => {
-          return item.path + this.refreshStamp;
+        }, (item: DisboardLayoutObject) => {
+          return item.fileObject.path + this.refreshStamp;
         })
       } else {
         // Display file info
@@ -192,6 +192,7 @@ export struct GridSpace {
           this.paths.push(this.fileObject.path);
           this.folderSizes.push(this.fileObject.size);
           this.fileObjects.push(this.fileObject);
+          return;
         }
       }
     })
@@ -223,6 +224,7 @@ export struct GridSpace {
     }
 
     // Init layoutObjects
+    this.layoutObjects = [];
     let lo: DisboardLayoutObject[] = [];
     // Init disboard
     this.disboard = [];
@@ -236,7 +238,7 @@ export struct GridSpace {
       // Calculate proper side length
       let squareSideLength = Math.round(Math.sqrt(fo.size / this.fileObject.size * this.rows * this.cols));
       // Too small process
-      squareSideLength = Math.min(1, squareSideLength);
+      squareSideLength = Math.max(1, squareSideLength);
       // Too big process
       if (squareSideLength >= this.maxLength) {
         squareSideLength = this.maxLength;
@@ -253,10 +255,11 @@ export struct GridSpace {
     lo.sort((a, b) => b.sideLength - a.sideLength);
 
     // Fill and Determine Position
-    let index = 0;
-    for (index = 0; index < lo.length; index++) {
+    let objects = 0;
+    for (let index = 0; index < lo.length; index++) {
       let fo = lo[index];
       let placed = false;
+
       // Continuously try to put
       while (!placed && fo.sideLength > 0) {
         let foSideLen = fo.sideLength;
@@ -284,21 +287,23 @@ export struct GridSpace {
           fo.sideLength = foSideLen - 1;
         }
       }
+
       // Stop putting if full
       if (!this.canPlaceAtGrid(this.rows - 1, this.cols - 1, 1)) {
         // Disboard full
-        console.log('meow')
         break;
       }
+      objects++;
     }
 
     // Cut over length
-    if (index != lo.length) {
-      console.log('cut')
-      this.layoutObjects = lo.slice(0, index + 1);
+    if (objects < lo.length) {
+      // console.log('cut @ ' + (objects + 1).toString() + '/' + lo.length.toString());
+      this.layoutObjects = lo.slice(0, objects + 1);
     } else {
       this.layoutObjects = lo;
     }
+
     // After put notify ForEach refresh
     this.refreshStamp = Date.now().toString();
   }
@@ -308,11 +313,17 @@ export struct GridSpace {
       // Index out of bounds
       return false;
     }
-    for (let index = 0; index < sl; index++) {
-      if (this.disboard[ro][co+index]) {
-        return false;
-      }
-      if (this.disboard[ro+index][co]) {
+    for (let i = 0; i < sl; i++) {
+      try {
+        if (this.disboard[ro][co+i]) {
+          return false;
+        }
+        if (this.disboard[ro+i][co]) {
+          return false;
+        }
+      } catch (e) {
+        // Index out of bounds? or other issues?
+        console.error(e);
         return false;
       }
     }
