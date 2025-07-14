@@ -32,7 +32,7 @@ export struct GridSpace {
   maxSideLength: number = 14;
   rows: number = 14;
   cols: number = 14;
-  refreshTimeout: number = 0;
+  refreshLayoutTimeout: number = 0;
   // Effect
   @State squareOffsetY: number = 100;
   @State squareOpacity: number = 0;
@@ -43,23 +43,28 @@ export struct GridSpace {
   aboutToAppear(): void {
     this.thisFileObjectID = this.fileObject?.id || '';
 
+    this.updateUseCompactText();
     this.calculateUnitLength();
     this.process();
-    this.updateUseCompactText();
 
     // Respond to layout change
     // triggered by parent GridSpace size change
-    // or FileObject change
     setInterval(() => {
-      if (0 < this.refreshTimeout && this.refreshTimeout <= 10) {
+      if (0 < this.refreshLayoutTimeout && this.refreshLayoutTimeout <= 10) {
         // Execution of re-arrangement
         this.calculateUnitLength();
-        this.process();
-        this.updateUseCompactText();
+        if (this.layer == 0) {
+          this.process();
+        } else {
+          // Cause ForEach contents to refresh
+          let temp = this.layoutObjects;
+          this.layoutObjects = [];
+          this.layoutObjects = temp;
+        }
       }
-      this.refreshTimeout -= 10;
-      if (this.refreshTimeout < 0) {
-        this.refreshTimeout = 0;
+      this.refreshLayoutTimeout -= 10;
+      if (this.refreshLayoutTimeout < 0) {
+        this.refreshLayoutTimeout = 0;
       }
     }, 10);
 
@@ -72,9 +77,9 @@ export struct GridSpace {
 
   onLayoutSizeChange() {
     if (this.layer == 0) {
-      this.refreshTimeout = 200;
+      this.refreshLayoutTimeout = 200;
     } else {
-      this.refreshTimeout = 10;
+      this.refreshLayoutTimeout = 50;
     }
   }
 
@@ -83,10 +88,11 @@ export struct GridSpace {
       return;
     }
     if (this.fileObject.id == this.thisFileObjectID) {
+      // No actual changes in FileObject
       return;
     }
     this.thisFileObjectID = this.fileObject.id;
-    this.refreshTimeout = 200;
+    this.refreshLayoutTimeout = 50;
   }
 
   onRequestFolderClose() {
@@ -218,13 +224,15 @@ export struct GridSpace {
   }
 
   private process() {
-    // let timerStart = Date.now();
     if (!this.fileObject) {
       return;
     }
     if (this.fileObject.type != 0) {
       return;
     }
+
+    // Timer head
+    // let timerStart = Date.now();
 
     // Init layoutObjects
     this.layoutObjects = [];
