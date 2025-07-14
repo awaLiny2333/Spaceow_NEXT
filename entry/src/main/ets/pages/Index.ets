@@ -29,7 +29,6 @@ struct Index {
   @LocalStorageLink('folderSizes') folderSizes: number[] = [];
   @LocalStorageLink('fileObjects') fileObjects: FileObject[] = [];
   // UI
-  @LocalStorageLink('grids') grids: number = 14;
   @LocalStorageLink('windowId') windowId: number = Date.now();
   @LocalStorageLink('windowHeight') @Watch('onWindowAreaChange') windowHeight: number = 100;
   @LocalStorageLink('windowWidth') @Watch('onWindowAreaChange') windowWidth: number = 100;
@@ -62,7 +61,7 @@ struct Index {
     Column({ space: 10 }) {
       Scroll() {
         Row({ space: 10 }) {
-          LinysButton({ text: $r('app.string.main_back') })
+          LinysButton({ text: $r('app.string.main_back') }) // Back
             .opacity(this.thisPath == this.basePath ? 0.5 : 1)
             .onClick(() => {
               if (this.basePath != this.thisPath) {
@@ -117,18 +116,18 @@ struct Index {
                 console.error(e);
               }
             })
-          LinysButton({ text: $r('app.string.main_open_as_new') })
+          LinysButton({ text: $r('app.string.main_open_as_new') }) // Open as new
             .opacity(!this.thisFileObject ? 0.5 : 1)
             .onClick(() => {
               // Open as new
               this.openAsNew(this.thisFileObject);
             })
-          LinysButton({ text: this.thisFolderSize + ' / ' + this.baseFolderSize + '  󰄝' })
-          LinysButton({ text: this.thisPath })
+          LinysButton({ text: this.thisFolderSize + ' / ' + this.baseFolderSize + '  󰄝' }) // Size Proportion
+          LinysButton({ text: this.thisPath }) // thisPath
             .onClick(() => {
               copy(this.thisPath);
             })
-          LinysButton({ text: this.scanFolderSize + '  󰀩' })
+          LinysButton({ text: this.scanFolderSize + '  󰀩' }) // Scan indicator
         }
       } // Title
       .align(Alignment.TopStart)

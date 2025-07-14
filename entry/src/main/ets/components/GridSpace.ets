@@ -5,7 +5,6 @@ import { addSizeUnits } from '../utils/storageTools';
 
 @Component
 export struct GridSpace {
-  @LocalStorageLink('windowId') windowId: number = Date.now();
   @LocalStorageLink('closeFolderRequest') @Watch('onRequestFolderClose') closeFolderRequest: string = '';
   // environment (base)
   @LocalStorageLink('basePath') basePath: string = 'Meow';
@@ -14,100 +13,109 @@ export struct GridSpace {
   @LocalStorageLink('thisPath') thisPath: string = 'Meow';
   @LocalStorageLink('thisFolderSize') thisFolderSize: string = '';
   @LocalStorageLink('thisFileObject') thisFileObject: FileObject | undefined = undefined;
+  thisFileObjectID: string = '';
   // environment (history)
   @LocalStorageLink('paths') paths: string[] = [];
   @LocalStorageLink('folderSizes') folderSizes: number[] = [];
   @LocalStorageLink('fileObjects') fileObjects: FileObject[] = [];
   // meow
-  @Prop @Watch('onGridsChange') sideWidth: number = 60;
-  @Prop @Watch('onGridsChange') sideHeight: number = 50;
+  @Prop @Watch('onLayoutSizeChange') sideWidth: number = 60;
+  @Prop @Watch('onLayoutSizeChange') sideHeight: number = 50;
   @Prop @Watch('onPathChange') fileObject: FileObject | undefined = undefined;
   @Prop isOpened: boolean = false;
-  // UI
-  @State lastFileObjectID: string = '';
-  @StorageProp('grids') @Watch('onGridsChange') grids: number = 10;
+  // UI Settings / Params
+  space: number = 4;
+  grids: number = 14;
+  // UI Statuses
   @Prop layer: number = 0;
-  @State unitLength: number = 10;
-  @State space: number = 4;
-  @State rows: number = 14;
-  @State cols: number = 14;
-  @State maxLength: number = 14;
-  @State refreshStamp: string = '';
-  @State refreshTimeout: number = 0;
+  unitLengthVP: number = 10;
+  maxSideLength: number = 14;
+  rows: number = 14;
+  cols: number = 14;
+  refreshTimeout: number = 0;
   // Effect
-  @State offY: number = 100;
-  @State opac: number = 0;
+  @State squareOffsetY: number = 100;
+  @State squareOpacity: number = 0;
+  @State useCompactText: boolean = false;
   // data
   @State layoutObjects: DisboardLayoutObject[] = [];
-  // @State processedObjects: FileObject[] = [];
-  // @State processedParams: Array<number>[] = [];
-  @State disboard: boolean[][] = [];
 
   aboutToAppear(): void {
+    this.thisFileObjectID = this.fileObject?.id || '';
+
     this.calculateUnitLength();
     this.process();
-    if (this.fileObject) {
-      this.isOpened = (this.thisPath.indexOf(this.fileObject.path)) == 0;
-      this.lastFileObjectID = this.fileObject.id;
-      // console.log('[GridSpace] Render square ' + this.fileObject.path);
-    }
+    this.updateUseCompactText();
 
     // Respond to layout change
+    // triggered by parent GridSpace size change
+    // or FileObject change
     setInterval(() => {
       if (0 < this.refreshTimeout && this.refreshTimeout <= 10) {
+        // Execution of re-arrangement
         this.calculateUnitLength();
         this.process();
+        this.updateUseCompactText();
       }
       this.refreshTimeout -= 10;
       if (this.refreshTimeout < 0) {
         this.refreshTimeout = 0;
       }
-    }, 10)
+    }, 10);
 
+    // Premiere animation ;P
     setTimeout(() => {
-      this.offY = 0;
-      this.opac = 1;
-    }, Math.floor(Math.random() * 200))
+      this.squareOffsetY = 0;
+      this.squareOpacity = 1;
+    }, Math.floor(Math.random() * 200));
   }
 
-  onGridsChange() {
-    console.log('onGridsChange! window: ' + this.windowId.toString() + ' new: ' + this.grids.toString());
-    this.refreshTimeout = 200;
+  onLayoutSizeChange() {
+    if (this.layer == 0) {
+      this.refreshTimeout = 200;
+    } else {
+      this.refreshTimeout = 10;
+    }
   }
 
   onPathChange() {
     if (!this.fileObject) {
-      // console.log('onPathChange ignored due to undefined fileObject.');
       return;
     }
-    if (this.fileObject.id == this.lastFileObjectID) {
-      // console.log('onPathChange ignored due to no change in this.fileObject.id.');
+    if (this.fileObject.id == this.thisFileObjectID) {
       return;
     }
-    this.lastFileObjectID = this.fileObject.id;
-    console.log('onPathChange!  window: ' + this.windowId.toString() + ' new: ' + this.fileObject.path);
+    this.thisFileObjectID = this.fileObject.id;
     this.refreshTimeout = 200;
   }
 
   onRequestFolderClose() {
-    if (this.fileObject && this.closeFolderRequest) {
-      if (this.closeFolderRequest == this.basePath) {
-        // Impossible to close base file :O
-        return;
-      }
-      if (this.closeFolderRequest != this.fileObject.path) {
-        // If not closing me
-        return;
-      }
-      // If is closing me (?!
-      this.isOpened = false;
-      this.paths.splice(this.paths.length - 1, 1);
-      this.thisPath = this.paths[this.paths.length - 1];
-      this.folderSizes.splice(this.folderSizes.length - 1, 1);
-      this.thisFolderSize = addSizeUnits(this.folderSizes[this.folderSizes.length - 1]);
-      this.fileObjects.splice(this.fileObjects.length - 1, 1);
-      this.thisFileObject = this.fileObjects[this.paths.length - 1];
+    if (!this.fileObject) {
+      return;
     }
+    if (!this.closeFolderRequest) {
+      // Empty request
+      return;
+    }
+    if (this.closeFolderRequest == this.basePath) {
+      // Impossible to close base file :O
+      return;
+    }
+    if (this.closeFolderRequest != this.fileObject.path) {
+      // If not closing me
+      return;
+    }
+    // If is closing me (?!
+    this.isOpened = false;
+    // Operations (history)
+    this.paths.splice(this.paths.length - 1, 1);
+    this.folderSizes.splice(this.folderSizes.length - 1, 1);
+    this.fileObjects.splice(this.fileObjects.length - 1, 1);
+    // Operations (this)
+    this.thisPath = this.paths[this.paths.length - 1];
+    this.thisFolderSize = addSizeUnits(this.folderSizes[this.folderSizes.length - 1]);
+    this.thisFileObject = this.fileObjects[this.paths.length - 1];
+    // Set empty
     this.closeFolderRequest = '';
   }
 
@@ -118,43 +126,33 @@ export struct GridSpace {
         ForEach(this.layoutObjects, (item: DisboardLayoutObject, index: number) => {
           GridSpace({
             fileObject: item.fileObject,
-            sideWidth: this.unitLength * this.layoutObjects[index].sideLength - this.space,
-            sideHeight: this.unitLength * this.layoutObjects[index].sideLength - this.space,
+            sideWidth: this.unitLengthVP * this.layoutObjects[index].sideLength - this.space,
+            sideHeight: this.unitLengthVP * this.layoutObjects[index].sideLength - this.space,
             layer: this.layer + 1,
           })
             .position({
-              top: this.layoutObjects[index].row * this.unitLength,
-              left: this.layoutObjects[index].col * this.unitLength
+              top: this.layoutObjects[index].row * this.unitLengthVP,
+              left: this.layoutObjects[index].col * this.unitLengthVP
             })
+            .animation(animationDefault())
         }, (item: DisboardLayoutObject) => {
-          return item.fileObject.path + this.refreshStamp;
+          return item.fileObject.path;
         })
       } else {
         // Display file info
         Column() {
-          if ((this.fileObject?.getName().length || 1) < 16) {
-            Text(this.fileObject?.getName())
-              .fontColor($r('app.color.accent'))
-              .fontSize(this.sideWidth * 0.2)
-              .fontWeight(FontWeight.Bold)
-              .maxLines(3)
-            Text(addSizeUnits(this.fileObject?.size || 0))
-              .fontSize(this.sideWidth * 0.15)
-              .fontColor($r('app.color.accent'))
-              .fontWeight(FontWeight.Medium)
-              .opacity(0.75)
-          } else {
-            Text(this.fileObject?.getName())
-              .fontColor($r('app.color.accent'))
-              .fontSize(this.sideWidth * 0.12)
-              .fontWeight(FontWeight.Bold)
-              .maxLines(5)
-            Text(addSizeUnits(this.fileObject?.size || 0))
-              .fontSize(this.sideWidth * 0.1)
-              .fontColor($r('app.color.accent'))
-              .fontWeight(FontWeight.Medium)
-              .opacity(0.75)
-          }
+          Text(this.fileObject?.getName())
+            .fontSize((this.useCompactText ? 0.12 : 0.2) * this.sideWidth)
+            .fontColor($r('app.color.accent'))
+            .fontWeight(FontWeight.Bold)
+            .maxLines(this.useCompactText ? 5 : 3)
+          // .animation(animationDefault())
+          Text(addSizeUnits(this.fileObject?.size || 0))
+            .fontSize((this.useCompactText ? 0.1 : 0.15) * this.sideWidth)
+            .fontColor($r('app.color.accent'))
+            .fontWeight(FontWeight.Medium)
+            // .animation(animationDefault())
+            .opacity(0.75)
         }
         .width('100%')
         .height('100%')
@@ -163,17 +161,18 @@ export struct GridSpace {
         .justifyContent(FlexAlign.End)
       }
     }
-    .padding(this.layer == 0 ? { left: this.space, top: this.space } : {})
-    .clip(true)
-    .backgroundColor(this.isOpened ? $r('app.color.start_window_background') : $r('app.color.supplementary'))
-    .opacity(this.opac * (this.isOpened ? 1 : ((this.fileObject?.path.indexOf(this.thisPath) || 0) == 0 ? 1 : 0.5)))
     .height(this.sideHeight)
     .width(this.sideWidth)
-    .offset({ y: this.offY })
+    .backgroundColor(this.isOpened ? $r('app.color.start_window_background') : $r('app.color.supplementary'))
+    .opacity(this.squareOpacity * (this.isOpened ? 1 : ((this.fileObject?.path.indexOf(this.thisPath) || 0) == 0 ? 1 : 0.5)))
+    .offset({ y: this.squareOffsetY })
     .animation(animationDefault())
+    .padding(this.layer == 0 ? { left: this.space, top: this.space } : {})
+    .clip(true)
     .borderRadius(Math.max(0, 16 - this.layer * 1.25))
     .onClick(() => {
       if (this.fileObject) {
+        // Not a folder
         if (this.fileObject.type != 0) {
           return;
         }
@@ -210,16 +209,20 @@ export struct GridSpace {
     // leave more space if is the base layer
     let spaceOffset = (this.layer == 0 ? -1 : 1) * this.space;
     // Calculates default unitLength
-    this.unitLength = ((Math.min(this.sideWidth, this.sideHeight) + spaceOffset) / this.grids);
+    this.unitLengthVP = ((Math.min(this.sideWidth, this.sideHeight) + spaceOffset) / this.grids);
     // Update rows and cols of layout
-    this.rows = Math.floor((this.sideHeight + spaceOffset) / this.unitLength);
-    this.cols = Math.floor((this.sideWidth + spaceOffset) / this.unitLength);
+    this.rows = Math.floor((this.sideHeight + spaceOffset) / this.unitLengthVP);
+    this.cols = Math.floor((this.sideWidth + spaceOffset) / this.unitLengthVP);
     // Update maxLength of squares
-    this.maxLength = Math.min(this.rows, this.cols);
+    this.maxSideLength = Math.min(this.rows, this.cols);
   }
 
   private process() {
+    // let timerStart = Date.now();
     if (!this.fileObject) {
+      return;
+    }
+    if (this.fileObject.type != 0) {
       return;
     }
 
@@ -227,9 +230,9 @@ export struct GridSpace {
     this.layoutObjects = [];
     let lo: DisboardLayoutObject[] = [];
     // Init disboard
-    this.disboard = [];
+    let disboard: boolean[][] = [];
     for (let i = 0; i < this.rows; i++) {
-      this.disboard.push(new Array(this.cols).fill(false));
+      disboard.push(new Array(this.cols).fill(false));
     }
 
     // Traverse all children and fill processedArrays
@@ -240,8 +243,8 @@ export struct GridSpace {
       // Too small process
       squareSideLength = Math.max(1, squareSideLength);
       // Too big process
-      if (squareSideLength >= this.maxLength) {
-        squareSideLength = this.maxLength;
+      if (squareSideLength >= this.maxSideLength) {
+        squareSideLength = this.maxSideLength;
         if (this.rows == this.cols && this.fileObject.childrens.length > 1) {
           // Leave some space for other blocks
           squareSideLength -= 1;
@@ -254,7 +257,7 @@ export struct GridSpace {
     // Sort
     lo.sort((a, b) => b.sideLength - a.sideLength);
 
-    // Fill and Determine Position
+    // Fill and Determine Position for each square
     let objects = 0;
     for (let index = 0; index < lo.length; index++) {
       let fo = lo[index];
@@ -269,10 +272,10 @@ export struct GridSpace {
         for (r = 0; r < this.rows - foSideLen + 1; r++) {
           // Traverse cols
           for (c = 0; c < this.cols - foSideLen + 1; c++) {
-            if (this.canPlaceAtGrid(r, c, foSideLen)) {
+            if (this.canPlaceAtGrid(r, c, foSideLen, disboard)) {
               lo[index].row = r;
               lo[index].col = c;
-              this.fillGrid(r, c, foSideLen);
+              this.fillGrid(r, c, foSideLen, disboard);
               placed = true;
               break;
             }
@@ -289,7 +292,7 @@ export struct GridSpace {
       }
 
       // Stop putting if full
-      if (!this.canPlaceAtGrid(this.rows - 1, this.cols - 1, 1)) {
+      if (disboard[this.rows - 1][this.cols - 1]) {
         // Disboard full
         break;
       }
@@ -304,21 +307,30 @@ export struct GridSpace {
       this.layoutObjects = lo;
     }
 
-    // After put notify ForEach refresh
-    this.refreshStamp = Date.now().toString();
+    // Log time
+    // let timerEnd = Date.now();
+    // console.log('  '.repeat(this.layer) + '[GridSpace] Rearranged [' + this.fileObject?.path + '] in ' + (timerEnd - timerStart).toString() + ' ms!');
   }
 
-  private canPlaceAtGrid(ro: number, co: number, sl: number) {
+  private updateUseCompactText() {
+    if (!this.fileObject) {
+      this.useCompactText = false;
+    } else {
+      this.useCompactText = this.fileObject.getName().length > 16;
+    }
+  }
+
+  private canPlaceAtGrid(ro: number, co: number, sl: number, disboard: boolean[][]) {
     if (ro + sl > this.rows || co + sl > this.cols) {
       // Index out of bounds
       return false;
     }
     for (let i = 0; i < sl; i++) {
       try {
-        if (this.disboard[ro][co+i]) {
+        if (disboard[ro][co+i]) {
           return false;
         }
-        if (this.disboard[ro+i][co]) {
+        if (disboard[ro+i][co]) {
           return false;
         }
       } catch (e) {
@@ -330,10 +342,10 @@ export struct GridSpace {
     return true;
   }
 
-  private fillGrid(ro: number, co: number, sl: number) {
+  private fillGrid(ro: number, co: number, sl: number, disboard: boolean[][]) {
     for (let r = 0; r < sl; r++) {
       for (let c = 0; c < sl; c++) {
-        this.disboard[ro+r][co+c] = true;
+        disboard[ro+r][co+c] = true;
       }
     }
   }
